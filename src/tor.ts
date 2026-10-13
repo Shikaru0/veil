@@ -1,20 +1,38 @@
+import { randomBytes } from "node:crypto";
 import { fetch, ProxyAgent, type RequestInit, type Response } from "undici";
 
 /** SOCKS5 endpoint of the local Tor daemon. */
-export const torSocksUrl = process.env.TOR_SOCKS ?? "socks5://127.0.0.1:9050";
+const torSocksUrl = process.env.TOR_SOCKS ?? "socks5://127.0.0.1:9050";
 
-const CONNECT_TIMEOUT_MS = 30_000;
-const REQUEST_TIMEOUT_MS = 60_000;
+const CONNECT_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 90_000;
+
+const torProxy = new URL(torSocksUrl);
+
+const createAgent = (): ProxyAgent =>
+  new ProxyAgent({ uri: torProxy.toString(), connectTimeout: CONNECT_TIMEOUT_MS });
 
 // Agent: all fetches route through Tor.
-const torAgent = new ProxyAgent({ uri: torSocksUrl, connectTimeout: CONNECT_TIMEOUT_MS });
+let torAgent = createAgent();
+
+/**
+ * Switch to a fresh circuit. Tor isolates streams by SOCKS credential, so a new
+ * random username/password gets its own circuit without needing the control port.
+ */
+export function rotateCircuit(): Promise<void> {
+  torProxy.username = randomBytes(8).toString("hex");
+  torProxy.password = randomBytes(8).toString("hex");
+  const previous = torAgent;
+  torAgent = createAgent();
+  return previous.close().catch(() => {});
+}
 
 export interface TorIdentity {
   IsTor: boolean;
   IP: string;
 }
 
-/** GET a URL through Tor. Dispatcher, redirects and a request deadline cannot be overridden. */
+/** GET a URL through Tor. Dispatcher and redirects are forced; a caller signal overrides the default deadline. */
 export function fetchOverTor(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, {
     ...init,
