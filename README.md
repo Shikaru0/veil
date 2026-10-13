@@ -2,6 +2,11 @@
 
 Read-only OSINT over Tor: aggregates `.onion` search engines and scrapes onion pages, exposed as a CLI and a local MCP server.
 
+## What does it add?
+
+veil allows AI to search the dark web, by passing a {query} into multiple search engines.
+It also allows for scraping the content of a page.
+
 ## Requirements
 
 - Node.js 22.19+ (undici, used for SOCKS5, requires it)
