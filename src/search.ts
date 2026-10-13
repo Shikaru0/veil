@@ -151,7 +151,7 @@ async function queryEngine(engine: Engine, encodedQuery: string): Promise<Engine
   }
 }
 
-/** Query the onion search engines for `query` and collect deduplicated hits. */
+/** Query the onion search engines for `query`, keeping one result per onion service. */
 export async function search(query: string, maxWorkers = 5): Promise<SearchResponse> {
   const encoded = encodeURIComponent(query ?? "");
 
@@ -168,13 +168,13 @@ export async function search(query: string, maxWorkers = 5): Promise<SearchRespo
   }
 
   const raw: SearchResult[] = outcomes.flatMap((outcome) => outcome.links);
+  // The hostname is the onion service; collapse its pages to one result.
   const seen = new Set<string>();
   const results: SearchResult[] = [];
   for (const result of raw) {
     let key: string;
     try {
-      const url = new URL(result.link);
-      key = `${url.protocol}//${url.hostname.toLowerCase()}${url.pathname.replace(/\/+$/, "")}?${url.searchParams.toString()}`;
+      key = hostOf(result.link);
     } catch {
       key = result.link;
     }
