@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "test": "tsx src/index.ts"
+    "test": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "type": "commonjs",
